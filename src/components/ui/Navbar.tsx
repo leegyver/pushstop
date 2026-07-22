@@ -34,7 +34,7 @@ export function Navbar() {
           ) : session?.user ? (
             <div className="flex items-center gap-4">
               <div className="flex flex-col items-end">
-                <span className="font-semibold text-sm">{session.user.name || session.user.nickname || "유저"}</span>
+                <span className="font-semibold text-sm">{session.user.name || (session.user as any).nickname || "유저"}</span>
                 <span className="text-xs text-[var(--accent-primary)] flex items-center gap-1">
                   <Coins className="w-3 h-3" /> {(session.user as any).balance?.toLocaleString() || 0} P
                 </span>
