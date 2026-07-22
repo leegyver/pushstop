@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { sendVerificationCode } from '../../../../../services/verification'
 
 import { getServerSession } from 'next-auth'
-import { authOptions } from '../../auth/[...nextauth]/route'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 export async function POST(req: Request) {
   try {
