@@ -11,17 +11,20 @@ export const authOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "mock",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "mock",
+      allowDangerousEmailAccountLinking: true,
     }),
     // @ts-ignore - NextAuth KakaoProvider types incorrectly require clientSecret even when auth method is "none"
     KakaoProvider({
       clientId: process.env.KAKAO_CLIENT_ID || "mock",
       client: {
         token_endpoint_auth_method: "none"
-      }
+      },
+      allowDangerousEmailAccountLinking: true,
     }),
     NaverProvider({
       clientId: process.env.NAVER_CLIENT_ID || "mock",
       clientSecret: process.env.NAVER_CLIENT_SECRET || "mock",
+      allowDangerousEmailAccountLinking: true,
     })
   ],
   callbacks: {
