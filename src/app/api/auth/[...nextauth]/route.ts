@@ -14,7 +14,7 @@ export const authOptions = {
     }),
     KakaoProvider({
       clientId: process.env.KAKAO_CLIENT_ID || "mock",
-      clientSecret: process.env.KAKAO_CLIENT_SECRET || "mock",
+      clientSecret: process.env.KAKAO_CLIENT_SECRET === "" ? undefined : (process.env.KAKAO_CLIENT_SECRET || "mock"),
     }),
     NaverProvider({
       clientId: process.env.NAVER_CLIENT_ID || "mock",
