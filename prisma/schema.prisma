@@ -1,0 +1,275 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum RoundStatus {
+  WAITING
+  ACTIVE
+  CALCULATING
+  ENDED
+}
+
+enum PointType {
+  AD_REWARD
+  GAME_WIN
+  SHOP_PURCHASE
+  ADMIN_ADJUST
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+// -----------------------------------------------------------------------------
+// MODELS
+// -----------------------------------------------------------------------------
+
+model User {
+  id              String   @id @default(uuid())
+  
+  // OAuth
+  googleId        String?  @unique
+  kakaoId         String?  @unique
+  naverId         String?  @unique
+  
+  // Profile
+  nickname        String
+  profileImage    String?
+  role            UserRole @default(USER)
+  
+  // Verification (Max 3 accounts per phone/email policy)
+  phoneNumber     String?  // Plain text (normalized, e.g., 01012345678)
+  encryptedEmail  String?  // AES-256 encrypted
+  emailHash       String?  // HMAC blind index for unique counts/search
+  isVerified      Boolean  @default(false)
+  
+  // State
+  balance         Int      @default(0)
+  isBanned        Boolean  @default(false)
+  suspiciousScore Float    @default(0.0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastLoginAt     DateTime @default(now())
+
+  // Relations
+  submissions       Submission[]
+  pointLogs         PointLog[]
+  orders            GiftCardOrder[]
+  chatMessages      ChatMessage[]
+  pushSubscriptions PushSubscription[]
+  deviceFingerprints DeviceFingerprint[]
+
+  // Indexes for account limit checks
+  @@index([phoneNumber])
+  @@index([emailHash])
+}
+
+model Round {
+  id              String      @id @default(uuid())
+  
+  targetTime      Decimal     @db.Decimal(20, 4) // e.g., 1735689600000.0000 (ms precision)
+  status          RoundStatus @default(WAITING)
+  totalPotPoints  Int         @default(0)
+  
+  startsAt        DateTime
+  endsAt          DateTime
+  nextRoundDelay  Int         // in seconds
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  submissions     Submission[]
+}
+
+model Submission {
+  id                String   @id @default(uuid())
+  roundId           String
+  userId            String
+  
+  exactTimestamp    Decimal  @db.Decimal(20, 4)
+  timeDiff          Decimal  @db.Decimal(20, 4) // absolute difference from target
+  isUnique          Boolean  @default(true)     // If someone else got exact same time
+  rank              Int?
+  
+  // Security / Anti-Cheat
+  hmacSignature     String   @db.Text
+  clientNonce       String
+  serverReceivedAt  DateTime @default(now())
+  powSolution       String?  @db.Text
+  recaptchaScore    Float?
+  behaviorHash      String?
+  deviceFingerprint String?
+  
+  createdAt         DateTime @default(now())
+
+  // Relations
+  round             Round    @relation(fields: [roundId], references: [id])
+  user              User     @relation(fields: [userId], references: [id])
+
+  @@index([roundId, timeDiff])
+  @@index([userId])
+}
+
+model PointLog {
+  id              String    @id @default(uuid())
+  userId          String
+  
+  amount          Int
+  type            PointType
+  previousBalance Int
+  newBalance      Int
+  referenceId     String?   // roundId or orderId depending on type
+  description     String?
+  
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model GiftCardOrder {
+  id                    String      @id @default(uuid())
+  userId                String
+  
+  tangoOrderId          String?     @unique
+  catalogItemId         String
+  pointsCost            Int
+  faceValue             Decimal     @db.Decimal(10, 2)
+  status                OrderStatus @default(PENDING)
+  encryptedDeliveryEmail String?
+  
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  // Relations
+  user                  User        @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  userId      String
+  roomId      String   @default("main")
+  content     String   @db.Text
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([roomId, createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  adminId     String   // userId of the admin
+  action      String
+  targetType  String   // e.g., "USER", "SYSTEM_CONFIG"
+  targetId    String
+  details     Json?
+  ipAddress   String?
+  
+  createdAt   DateTime @default(now())
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+}
+
+model SystemConfig {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String   @db.Text
+  updatedBy   String?  // admin userId
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PushSubscription {
+  id          String   @id @default(uuid())
+  userId      String
+  
+  endpoint    String   @db.Text
+  p256dhKey   String
+  authKey     String
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+}
+
+model DeviceFingerprint {
+  id          String   @id @default(uuid())
+  userId      String
+  
+  fingerprint String
+  userAgent   String   @db.Text
+  
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, fingerprint])
+  @@index([fingerprint])
+}
+
+// -----------------------------------------------------------------------------
+// ANALYTICS & LOGGING
+// -----------------------------------------------------------------------------
+
+model PageView {
+  id        String   @id @default(uuid())
+  path      String
+  ipAddress String?
+  userId    String?
+  userAgent String?  @db.Text
+  dwellTime Int      @default(0) // Time spent in seconds
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // To allow heartbeat updates
+
+  @@index([path, createdAt])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+model DailyStat {
+  id             String   @id @default(uuid())
+  date           DateTime @unique // Stored at UTC midnight for the specific day
+  
+  visitors       Int      @default(0) // Unique IPs or Sessions
+  pageViews      Int      @default(0)
+  participations Int      @default(0) // Total submissions
+  totalDwellTime Int      @default(0) // Total seconds to calculate average
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

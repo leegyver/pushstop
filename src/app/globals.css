@@ -1,26 +1,124 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* =========================================
+     [BASE / DEFAULT THEME] - Cyberpunk Dark
+     ========================================= */
+  --bg-color: #050505;
+  --bg-gradient-start: rgba(15, 23, 42, 0.8);
+  --bg-gradient-mid: rgba(5, 5, 5, 0.9);
+  --bg-gradient-end: #050505;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  
+  --accent-primary: #10b981; /* Emerald */
+  --accent-secondary: #3b82f6; /* Blue */
+  --accent-glow: rgba(16, 185, 129, 0.3);
+  
+  --panel-bg: rgba(30, 41, 59, 0.3);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --glass-blur: 16px;
+  
+  --btn-stop-bg: linear-gradient(135deg, #ef4444, #b91c1c);
+  --btn-stop-glow: rgba(239, 68, 68, 0.5);
+}
+
+[data-theme="christmas"] {
+  /* =========================================
+     [CHRISTMAS THEME] - Red & Green festive
+     ========================================= */
+  --bg-color: #0b0202;
+  --bg-gradient-start: rgba(88, 28, 28, 0.6);
+  --bg-gradient-mid: rgba(11, 2, 2, 0.9);
+  --bg-gradient-end: #0b0202;
+  
+  --text-primary: #fdfbf7;
+  --text-secondary: #fca5a5;
+  
+  --accent-primary: #22c55e; /* Festive Green */
+  --accent-secondary: #ef4444; /* Festive Red */
+  --accent-glow: rgba(239, 68, 68, 0.3);
+  
+  --panel-bg: rgba(69, 10, 10, 0.4);
+  --panel-border: rgba(239, 68, 68, 0.2);
+  
+  --btn-stop-bg: linear-gradient(135deg, #22c55e, #166534);
+  --btn-stop-glow: rgba(34, 197, 94, 0.5);
+}
+
+[data-theme="summer"] {
+  /* =========================================
+     [SUMMER THEME] - Ocean & Sun
+     ========================================= */
+  --bg-color: #020617;
+  --bg-gradient-start: rgba(2, 132, 199, 0.4);
+  --bg-gradient-mid: rgba(2, 6, 23, 0.9);
+  --bg-gradient-end: #020617;
+  
+  --text-primary: #f0f9ff;
+  --text-secondary: #7dd3fc;
+  
+  --accent-primary: #f59e0b; /* Sun Yellow */
+  --accent-secondary: #0ea5e9; /* Ocean Blue */
+  --accent-glow: rgba(14, 165, 233, 0.3);
+  
+  --panel-bg: rgba(3, 105, 161, 0.2);
+  --panel-border: rgba(14, 165, 233, 0.2);
+  
+  --btn-stop-bg: linear-gradient(135deg, #f59e0b, #b45309);
+  --btn-stop-glow: rgba(245, 158, 11, 0.5);
+}
+
+[data-theme="winter"] {
+  /* =========================================
+     [WINTER THEME] - Ice & Snow
+     ========================================= */
+  --bg-color: #040b16;
+  --bg-gradient-start: rgba(224, 242, 254, 0.2);
+  --bg-gradient-mid: rgba(4, 11, 22, 0.9);
+  --bg-gradient-end: #040b16;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #bae6fd;
+  
+  --accent-primary: #38bdf8; /* Ice Blue */
+  --accent-secondary: #e0f2fe; /* Snow White */
+  --accent-glow: rgba(224, 242, 254, 0.3);
+  
+  --panel-bg: rgba(56, 189, 248, 0.1);
+  --panel-border: rgba(255, 255, 255, 0.2);
+  
+  --btn-stop-bg: linear-gradient(135deg, #38bdf8, #0284c7);
+  --btn-stop-glow: rgba(56, 189, 248, 0.5);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg-color);
+  --color-foreground: var(--text-primary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.5s ease, color 0.5s ease;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Glassmorphism Panel Utility */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--panel-border);
+  transition: all 0.5s ease;
+}
+
+.text-gradient {
+  background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
