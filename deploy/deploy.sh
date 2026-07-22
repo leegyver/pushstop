@@ -3,7 +3,7 @@ set -e
 cd /var/www/pushstop
 
 echo "📦 Installing dependencies..."
-npm ci --production=false
+npm install
 
 echo "🗄️ Running database migrations..."
 npx prisma migrate deploy

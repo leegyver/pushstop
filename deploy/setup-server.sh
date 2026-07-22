@@ -6,7 +6,7 @@ sudo mkdir -p /var/www/pushstop
 sudo chown -R $USER:$USER /var/www/pushstop
 
 # 2. Nginx 설정 심볼릭 링크
-sudo cp ./nginx-pushstop.conf /etc/nginx/sites-available/pushstop.conf
+sudo cp ./deploy/nginx-pushstop.conf /etc/nginx/sites-available/pushstop.conf
 sudo ln -sf /etc/nginx/sites-available/pushstop.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
