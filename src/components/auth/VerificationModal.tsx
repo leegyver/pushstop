@@ -1,8 +1,8 @@
 "use client"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useSession } from "next-auth/react"
-import { ShieldAlert, Loader2, CheckCircle2 } from "lucide-react"
+import { useSession, signOut } from "next-auth/react"
+import { ShieldAlert, Loader2, CheckCircle2, X } from "lucide-react"
 
 export function VerificationModal() {
   const { data: session, update, status } = useSession()
@@ -81,6 +81,13 @@ export function VerificationModal() {
         animate={{ opacity: 1, scale: 1 }}
         className="relative w-full max-w-md bg-[var(--panel-bg)] border border-[var(--panel-border)] p-8 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(255,0,0,0.15)]"
       >
+        <button 
+          onClick={() => signOut({ callbackUrl: '/' })}
+          className="absolute top-4 right-4 p-2 text-[var(--text-secondary)] hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
+          title="취소 및 로그아웃"
+        >
+          <X className="w-5 h-5" />
+        </button>
         <div className="text-center mb-6 flex flex-col items-center">
           <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-4">
             <ShieldAlert className="w-8 h-8" />
