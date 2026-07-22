@@ -3,7 +3,7 @@ set -e
 cd /var/www/pushstop
 
 echo "📦 Installing dependencies..."
-npm install
+npm install --legacy-peer-deps
 
 echo "🗄️ Running database migrations..."
 npx prisma db push --accept-data-loss
