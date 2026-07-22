@@ -5,6 +5,10 @@ cd /var/www/pushstop
 echo "📦 Installing dependencies..."
 npm install --legacy-peer-deps
 
+echo "🧹 Cleaning up old obsolete files..."
+rm -rf src/app/api/auth/google src/app/api/auth/kakao src/app/api/auth/naver src/services/auth.ts
+
+
 echo "🗄️ Running database migrations..."
 npx prisma db push --accept-data-loss
 npx prisma generate
