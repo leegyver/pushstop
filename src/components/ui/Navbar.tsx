@@ -1,11 +1,15 @@
 "use client"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
-import { Monitor, Moon, Sun, Snowflake, Trees, Gift } from "lucide-react"
+import { Monitor, Moon, Sun, Snowflake, Trees, Gift, LogOut, User as UserIcon, Coins } from "lucide-react"
+import { useSession, signOut } from "next-auth/react"
+import { LoginModal } from "./LoginModal"
 
 export function Navbar() {
   const { theme, setTheme } = useTheme()
+  const { data: session, status } = useSession()
   const [mounted, setMounted] = useState(false)
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
 
   // Avoid hydration mismatch
   useEffect(() => setMounted(true), [])
@@ -21,31 +25,43 @@ export function Navbar() {
           <span className="font-bold text-xl tracking-tight">Push Stop</span>
         </div>
 
-        {/* Theme Switcher & Actions */}
-        <div className="flex items-center gap-4">
-          {mounted && (
-            <div className="flex bg-[var(--bg-gradient-start)] p-1 rounded-xl border border-[var(--panel-border)]">
-              <button onClick={() => setTheme('system')} className={`p-2 rounded-lg transition-colors ${theme === 'system' ? 'bg-[var(--panel-bg)] text-[var(--accent-primary)]' : 'text-[var(--text-secondary)] hover:text-white'}`} title="System / Default">
-                <Monitor className="w-4 h-4" />
-              </button>
-              <button onClick={() => setTheme('summer')} className={`p-2 rounded-lg transition-colors ${theme === 'summer' ? 'bg-[var(--panel-bg)] text-[var(--accent-primary)]' : 'text-[var(--text-secondary)] hover:text-white'}`} title="Summer Theme">
-                <Sun className="w-4 h-4" />
-              </button>
-              <button onClick={() => setTheme('winter')} className={`p-2 rounded-lg transition-colors ${theme === 'winter' ? 'bg-[var(--panel-bg)] text-[var(--accent-primary)]' : 'text-[var(--text-secondary)] hover:text-white'}`} title="Winter Theme">
-                <Snowflake className="w-4 h-4" />
-              </button>
-              <button onClick={() => setTheme('christmas')} className={`p-2 rounded-lg transition-colors ${theme === 'christmas' ? 'bg-[var(--panel-bg)] text-[var(--accent-primary)]' : 'text-[var(--text-secondary)] hover:text-white'}`} title="Christmas Theme">
-                <Gift className="w-4 h-4" />
+        {/* Theme Switcher removed - will be controlled via Admin */}
+          
+        {/* Auth Button / User Profile */}
+        <div className="flex flex-col items-end">
+          {status === "loading" ? (
+            <div className="w-24 h-8 bg-gray-200/20 animate-pulse rounded-lg" />
+          ) : session?.user ? (
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-end">
+                <span className="font-semibold text-sm">{session.user.name || session.user.nickname || "유저"}</span>
+                <span className="text-xs text-[var(--accent-primary)] flex items-center gap-1">
+                  <Coins className="w-3 h-3" /> {(session.user as any).balance?.toLocaleString() || 0} P
+                </span>
+              </div>
+              {session.user.image ? (
+                <img src={session.user.image} alt="Profile" className="w-10 h-10 rounded-full border-2 border-[var(--panel-border)]" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-[var(--panel-bg)] border border-[var(--panel-border)] flex items-center justify-center">
+                  <UserIcon className="w-5 h-5 text-[var(--text-secondary)]" />
+                </div>
+              )}
+              <button onClick={() => signOut()} className="p-2 text-[var(--text-secondary)] hover:text-red-400 transition-colors" title="로그아웃">
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
+          ) : (
+            <button 
+              onClick={() => setIsLoginModalOpen(true)}
+              className="px-5 py-2 bg-white text-black font-semibold rounded-xl hover:scale-105 transition-transform"
+            >
+              로그인
+            </button>
           )}
-          
-          {/* Example Auth Button / Balance */}
-          <div className="hidden md:flex flex-col items-end">
-            <span className="text-xs text-[var(--text-secondary)]">로그인 해주세요</span>
-          </div>
         </div>
       </div>
+
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
     </nav>
   )
 }

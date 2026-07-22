@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server'
 import { sendVerificationCode } from '../../../../../services/verification'
 
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../../auth/[...nextauth]/route'
+
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { phoneNumber } = await req.json()
 
     if (!phoneNumber) {

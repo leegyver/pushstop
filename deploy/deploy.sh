@@ -6,7 +6,7 @@ echo "📦 Installing dependencies..."
 npm install
 
 echo "🗄️ Running database migrations..."
-npx prisma migrate deploy
+npx prisma db push --accept-data-loss
 npx prisma generate
 
 echo "🏗️ Building Next.js application..."
