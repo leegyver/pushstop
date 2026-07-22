@@ -12,6 +12,7 @@ export const authOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || "mock",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "mock",
     }),
+    // @ts-ignore - NextAuth KakaoProvider types incorrectly require clientSecret even when auth method is "none"
     KakaoProvider({
       clientId: process.env.KAKAO_CLIENT_ID || "mock",
       client: {
