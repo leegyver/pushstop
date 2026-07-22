@@ -42,7 +42,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 onClick={() => signIn('google')}
                 className="w-full py-3 px-4 bg-white text-black font-semibold rounded-xl flex items-center justify-center gap-3 hover:bg-gray-100 transition-colors"
               >
-                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                <img src="https://authjs.dev/img/providers/google.svg" alt="Google" className="w-5 h-5" />
                 구글로 시작하기
               </button>
               <button
