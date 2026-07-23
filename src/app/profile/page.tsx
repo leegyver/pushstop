@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
@@ -19,7 +19,7 @@ export default function ProfilePage() {
 
   // Avatar Upload State
   const [avatarUploading, setAvatarUploading] = useState(false)
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") {
