@@ -60,7 +60,7 @@ model User {
   isVerified     Boolean @default(false)
 
   // State
-  balance         Int     @default(0)
+  balance         Int     @default(100)
   isBanned        Boolean @default(false)
   suspiciousScore Float   @default(0.0)
 

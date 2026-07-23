@@ -1,13 +1,17 @@
 "use client"
 import { motion } from "framer-motion"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
+import { StopButton } from "./StopButton"
 
 interface GameTimerProps {
   targetTimeMs: number
+  onStop?: (exactMs: number) => void
+  disabled?: boolean
 }
 
-export function GameTimer({ targetTimeMs }: GameTimerProps) {
+export function GameTimer({ targetTimeMs, onStop, disabled }: GameTimerProps) {
   const [currentMs, setCurrentMs] = useState(0)
+  const isStopped = useRef(false)
 
   // Mock a running timer for the landing page visual
   useEffect(() => {
@@ -15,13 +19,23 @@ export function GameTimer({ targetTimeMs }: GameTimerProps) {
     const start = performance.now() - 34000 // Start from some random offset
 
     const update = (time: number) => {
-      setCurrentMs((time - start) % 60000) // Loop every 60s
-      animationFrameId = requestAnimationFrame(update)
+      if (!isStopped.current) {
+        setCurrentMs((time - start) % 60000) // Loop every 60s
+        animationFrameId = requestAnimationFrame(update)
+      }
     }
     
     animationFrameId = requestAnimationFrame(update)
     return () => cancelAnimationFrame(animationFrameId)
   }, [])
+
+  const handleStop = () => {
+    if (disabled || isStopped.current) return
+    isStopped.current = true
+    if (onStop) {
+      onStop(currentMs)
+    }
+  }
 
   // Format MM:SS.ms (ms up to 4 digits)
   const formatTime = (ms: number) => {
@@ -34,6 +48,7 @@ export function GameTimer({ targetTimeMs }: GameTimerProps) {
   const { mins, secs, fraction } = formatTime(currentMs)
 
   return (
+    <>
     <div className="flex flex-col items-center justify-center p-8 glass-panel rounded-3xl relative overflow-hidden group">
       {/* Background Glow */}
       <div className="absolute inset-0 bg-[var(--accent-glow)] opacity-0 group-hover:opacity-20 transition-opacity duration-1000 blur-3xl rounded-full" />
@@ -52,5 +67,12 @@ export function GameTimer({ targetTimeMs }: GameTimerProps) {
         <span className="text-[var(--accent-primary)] text-4xl md:text-6xl">.{fraction}</span>
       </motion.div>
     </div>
+    
+    <div className="w-full mt-4">
+      {/* We need the StopButton to call handleStop. Wait, the page component handles StopButton? 
+          Ah, I removed StopButton from page.tsx and just put GameTimer. Let's include StopButton here. */}
+      <StopButton onClick={handleStop} disabled={disabled || isStopped.current} />
+    </div>
+    </>
   )
 }
