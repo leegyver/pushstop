@@ -68,7 +68,8 @@ async function createNewRound() {
   const now = new Date()
   
   // 첫 라운드(또는 수동 시작)는 현재 시간으로부터 30분 뒤를 타겟으로 설정
-  const targetOffset = 30 * 60 * 1000
+  // 만단위 초(소수점 이하 밀리초)까지 완벽하게 랜덤화 (0.0000 ~ 999.9999 밀리초 추가)
+  const targetOffset = (30 * 60 * 1000) + (Math.random() * 1000)
   const targetTime = now.getTime() + targetOffset
   
   // 게임 종료 시간은 타겟 시간 이후 1분(유예 시간) 뒤
@@ -190,9 +191,10 @@ export async function calculateRoundResults(roundId: string) {
   // 로직 간소화를 위해, 현재 게임이 끝난 즉시 새 라운드를 만들되 startsAt을 10분 뒤로 세팅
   
   // 다음 라운드 스케줄링시 "20분 내외(18분~22분)" 랜덤 타겟 설정
+  // 만단위 초(소수점 이하 밀리초)까지 완벽하게 랜덤화
   const minTargetOffset = 18 * 60 * 1000
   const maxTargetOffset = 22 * 60 * 1000
-  const randomOffset = Math.floor(Math.random() * (maxTargetOffset - minTargetOffset)) + minTargetOffset
+  const randomOffset = Math.floor(Math.random() * (maxTargetOffset - minTargetOffset)) + minTargetOffset + (Math.random() * 1000)
   const nextTargetTime = nextStartsAt.getTime() + randomOffset
 
   // 게임 종료 시간은 타겟 시간 이후 1분 뒤

@@ -21,9 +21,9 @@ export function GameTimer({ targetTimeMs, serverTimeOffset, onStop, disabled }: 
     const update = () => {
       if (!isStopped.current) {
         // performance.now() is high-precision. We get the absolute time by:
-        // AbsoluteSyncTime = Date.now() + serverTimeOffset + small performance adjustments.
-        // For simplicity and high precision:
-        setCurrentMs(Date.now() + serverTimeOffset)
+        // AbsoluteSyncTime = Date.now() + serverTimeOffset + (performance.now() % 1)
+        // This adds the sub-millisecond fraction for smooth 1/10000 display.
+        setCurrentMs(Date.now() + serverTimeOffset + (performance.now() % 1))
         animationFrameId = requestAnimationFrame(update)
       }
     }
@@ -44,11 +44,16 @@ export function GameTimer({ targetTimeMs, serverTimeOffset, onStop, disabled }: 
   const formatTime = (ms: number) => {
     // Add KST offset (UTC +9)
     const kstMs = ms + (9 * 60 * 60 * 1000)
-    const date = new Date(kstMs)
+    // Date constructor only takes integers, so we floor it
+    const date = new Date(Math.floor(kstMs))
     
     const hh = date.getUTCHours().toString().padStart(2, '0')
     const mm = date.getUTCMinutes().toString().padStart(2, '0')
     const ss = date.getUTCSeconds().toString().padStart(2, '0')
+    
+    // Get the fractional part of milliseconds (e.g. 123.4567 -> 0.4567)
+    // We multiply by 10 to get 4 digits: (123.4567 % 1000) * 10 = 1234.567
+    // Floor it to 1234
     const fraction = Math.floor((kstMs % 1000) * 10).toString().padStart(4, '0')
     return { hh, mm, ss, fraction }
   }
@@ -78,7 +83,7 @@ export function GameTimer({ targetTimeMs, serverTimeOffset, onStop, disabled }: 
       <div className="mt-8 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center">
         <div className="text-xs text-[var(--text-secondary)] mb-1 uppercase font-bold tracking-wider">목표 시간 (Target Time)</div>
         <div className="text-2xl font-mono font-bold text-green-400">
-          {formatTime(targetTimeMs).hh}:{formatTime(targetTimeMs).mm}:{formatTime(targetTimeMs).ss}.0000
+          {formatTime(targetTimeMs).hh}:{formatTime(targetTimeMs).mm}:{formatTime(targetTimeMs).ss}.{formatTime(targetTimeMs).fraction}
         </div>
       </div>
     </div>
