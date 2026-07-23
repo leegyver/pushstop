@@ -1,0 +1,27 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="200" fill="#0A0A0A" />
+  
+  <!-- Outer Glow Ring -->
+  <circle cx="100" cy="100" r="85" fill="none" stroke="url(#glow-gradient)" stroke-width="2" opacity="0.5" />
+  
+  <!-- Inner dashed tech ring -->
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#333333" stroke-width="4" stroke-dasharray="8 8" />
+  
+  <!-- Main geometric face/abstract icon -->
+  <path d="M70 120 L100 70 L130 120 Z" fill="url(#primary-gradient)" />
+  <path d="M100 135 C80 135 65 125 65 125 L75 145 C85 155 115 155 125 145 L135 125 C135 125 120 135 100 135 Z" fill="#FF6B00" />
+  <circle cx="100" cy="90" r="8" fill="#111111" />
+
+  <!-- Defs for Gradients -->
+  <defs>
+    <linearGradient id="glow-gradient" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF6B00" />
+      <stop offset="1" stop-color="#9D00FF" />
+    </linearGradient>
+    <linearGradient id="primary-gradient" x1="100" y1="70" x2="100" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF6B00" />
+      <stop offset="1" stop-color="#FF2A00" />
+    </linearGradient>
+  </defs>
+</svg>

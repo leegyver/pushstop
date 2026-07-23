@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { User, ShieldCheck, Trophy, Activity, History, ArrowRight, Loader2, Coins } from "lucide-react"
+import { User, ShieldCheck, Trophy, Activity, History, ArrowRight, Loader2, Coins, Pencil, X } from "lucide-react"
 
 export default function ProfilePage() {
   const { data: session, status } = useSession()
@@ -11,6 +11,12 @@ export default function ProfilePage() {
   
   const [profileData, setProfileData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+
+  // Edit Nickname State
+  const [isEditingNickname, setIsEditingNickname] = useState(false)
+  const [newNickname, setNewNickname] = useState("")
+  const [editError, setEditError] = useState("")
+  const [editLoading, setEditLoading] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -31,6 +37,33 @@ export default function ProfilePage() {
       console.error("Failed to fetch profile", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleUpdateNickname = async () => {
+    if (newNickname.trim().length < 2 || newNickname.trim().length > 12) {
+      setEditError("닉네임은 2~12자 사이여야 합니다.")
+      return
+    }
+    setEditLoading(true)
+    setEditError("")
+    try {
+      const res = await fetch("/api/profile/nickname", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname: newNickname })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setProfileData({ ...profileData, user: { ...profileData.user, nickname: data.nickname } })
+        setIsEditingNickname(false)
+      } else {
+        setEditError(data.error || "닉네임 변경에 실패했습니다.")
+      }
+    } catch (error) {
+      setEditError("네트워크 오류가 발생했습니다.")
+    } finally {
+      setEditLoading(false)
     }
   }
 
@@ -63,13 +96,25 @@ export default function ProfilePage() {
               {user.image ? (
                 <img src={user.image} alt={user.nickname || "User"} className="w-full h-full object-cover" />
               ) : (
-                <User className="w-12 h-12 text-white/50" />
+                <img src="/default-avatar.svg" alt="Default Profile" className="w-full h-full object-cover" />
               )}
             </div>
             
-            <h1 className="text-2xl font-black text-white relative z-10">
-              {user.nickname || user.name || "Unknown User"}
-            </h1>
+            <div className="relative z-10 flex items-center gap-2 mb-1">
+              <h1 className="text-2xl font-black text-white">
+                {user.nickname || user.name || "Unknown User"}
+              </h1>
+              <button 
+                onClick={() => {
+                  setNewNickname(user.nickname || user.name || "")
+                  setIsEditingNickname(true)
+                }}
+                className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-[var(--text-secondary)] hover:text-white transition-colors"
+                title="닉네임 변경"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            </div>
             <p className="text-[var(--text-secondary)] text-sm mb-6 relative z-10">{user.email}</p>
             
             <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-full text-green-400 text-sm font-bold relative z-10">
@@ -177,6 +222,46 @@ export default function ProfilePage() {
           </div>
         </div>
       </motion.div>
+
+      {/* Edit Nickname Modal */}
+      {isEditingNickname && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[var(--panel-bg)] border border-[var(--panel-border)] rounded-2xl p-6 w-full max-w-md shadow-2xl relative"
+          >
+            <button 
+              onClick={() => setIsEditingNickname(false)}
+              className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-xl font-bold text-white mb-4">닉네임 변경</h2>
+            
+            <div className="mb-4">
+              <label className="block text-sm text-[var(--text-secondary)] mb-2">새 닉네임 (2~12자)</label>
+              <input 
+                type="text" 
+                value={newNickname}
+                onChange={(e) => setNewNickname(e.target.value)}
+                maxLength={12}
+                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
+                placeholder="새 닉네임 입력"
+              />
+              {editError && <p className="text-red-400 text-sm mt-2">{editError}</p>}
+            </div>
+
+            <button 
+              onClick={handleUpdateNickname}
+              disabled={editLoading || !newNickname.trim()}
+              className="w-full py-3 bg-[var(--accent-primary)] text-white rounded-xl font-bold hover:bg-[var(--accent-secondary)] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {editLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "저장하기"}
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

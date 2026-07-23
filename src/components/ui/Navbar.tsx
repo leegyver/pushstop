@@ -42,11 +42,9 @@ export function Navbar() {
                   </span>
                 </div>
                 {session.user.image ? (
-                  <img src={session.user.image} alt="Profile" className="w-10 h-10 rounded-full border-2 border-[var(--panel-border)]" />
+                  <img src={session.user.image} alt="Profile" className="w-10 h-10 rounded-full border-2 border-[var(--panel-border)] object-cover" />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-[var(--panel-bg)] border border-[var(--panel-border)] flex items-center justify-center">
-                    <UserIcon className="w-5 h-5 text-[var(--text-secondary)]" />
-                  </div>
+                  <img src="/default-avatar.svg" alt="Default Profile" className="w-10 h-10 rounded-full border-2 border-[var(--panel-border)] object-cover" />
                 )}
               </Link>
               <button onClick={() => signOut()} className="p-2 text-[var(--text-secondary)] hover:text-red-400 transition-colors" title="로그아웃">
