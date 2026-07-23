@@ -6,38 +6,50 @@ import { StopButton } from "./StopButton"
 interface GameTimerProps {
   targetTimeMs: number
   serverTimeOffset: number
-  onStop?: (exactMs: number) => void
+  onStop: (exactTimestamp: number, eventData: any) => void
   disabled?: boolean
 }
 
 export function GameTimer({ targetTimeMs, serverTimeOffset, onStop, disabled }: GameTimerProps) {
   const [currentMs, setCurrentMs] = useState(0)
   const isStopped = useRef(false)
+  const animationFrameId = useRef<number>()
 
   useEffect(() => {
-    let animationFrameId: number
-    const start = performance.now() - 34000 // Start from some random offset
-
     const update = () => {
       if (!isStopped.current) {
-        // performance.now() is high-precision. We get the absolute time by:
-        // AbsoluteSyncTime = Date.now() + serverTimeOffset + (performance.now() % 1)
-        // This adds the sub-millisecond fraction for smooth 1/10000 display.
         setCurrentMs(Date.now() + serverTimeOffset + (performance.now() % 1))
-        animationFrameId = requestAnimationFrame(update)
+        animationFrameId.current = requestAnimationFrame(update)
       }
     }
     
-    animationFrameId = requestAnimationFrame(update)
-    return () => cancelAnimationFrame(animationFrameId)
+    animationFrameId.current = requestAnimationFrame(update)
+    return () => {
+      if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current)
+    }
   }, [serverTimeOffset])
 
-  const handleStop = () => {
+  const handleStopClick = (e: React.MouseEvent) => {
     if (disabled || isStopped.current) return
-    isStopped.current = true
-    if (onStop) {
-      onStop(currentMs)
+    
+    // [BOT DEFENSE] isTrusted 속성이 false이면 스크립트에 의한 가짜 클릭
+    if (!e.isTrusted) {
+      console.warn("Untrusted click detected. Ignored.")
+      return
     }
+
+    isStopped.current = true
+    if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current)
+    
+    // Stop the clock right away
+    const exactStopMs = Date.now() + serverTimeOffset + (performance.now() % 1)
+    setCurrentMs(exactStopMs)
+    
+    onStop(exactStopMs, {
+      isTrusted: e.isTrusted,
+      x: e.clientX,
+      y: e.clientY
+    })
   }
 
   // Format absolute KST Time HH:MM:SS.xxxx
@@ -89,9 +101,8 @@ export function GameTimer({ targetTimeMs, serverTimeOffset, onStop, disabled }: 
     </div>
     
     <div className="w-full mt-4">
-      {/* We need the StopButton to call handleStop. Wait, the page component handles StopButton? 
-          Ah, I removed StopButton from page.tsx and just put GameTimer. Let's include StopButton here. */}
-      <StopButton onClick={handleStop} disabled={disabled || isStopped.current} />
+      {/* We need the StopButton to call handleStopClick. */}
+      <StopButton onClick={handleStopClick} disabled={disabled || isStopped.current} />
     </div>
     </>
   )

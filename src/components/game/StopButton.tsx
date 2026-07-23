@@ -2,7 +2,7 @@
 import { motion } from "framer-motion"
 
 interface StopButtonProps {
-  onClick?: () => void
+  onClick?: (e: React.MouseEvent) => void
   disabled?: boolean
 }
 

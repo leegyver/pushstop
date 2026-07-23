@@ -14,10 +14,29 @@ export async function POST(req: Request) {
     const userId = (session.user as any).id
 
     const body = await req.json()
-    const { exactTimestamp, hmacSignature, clientNonce } = body
+    const { exactTimestamp, hmacSignature, eventData } = body
 
-    if (!exactTimestamp) {
+    if (!exactTimestamp || !hmacSignature || !eventData) {
       return NextResponse.json({ error: "Invalid data" }, { status: 400 })
+    }
+
+    // [BOT DEFENSE] 1. eventData 검증 (isTrusted, 좌표)
+    if (!eventData.isTrusted) {
+      return NextResponse.json({ error: "비정상적인 접근입니다. (Untrusted Event)" }, { status: 400 })
+    }
+    if (eventData.x === 0 && eventData.y === 0) {
+      // 마우스 좌표가 0,0인 경우는 거의 없으므로 봇으로 의심할 수 있음. 하지만 접근성 도구일 수도 있음.
+      // 엄격하게 막으려면 차단 가능. 현재는 경고만.
+      console.warn(`[BOT SUSPICION] User ${userId} submitted with x=0, y=0.`)
+    }
+
+    // [BOT DEFENSE] 2. HMAC 서명 검증
+    const secretKeyStr = process.env.NEXT_PUBLIC_GAME_SECRET || "pushstop_fallback_secret_2026"
+    const dataString = `${exactTimestamp}:${eventData.isTrusted}:${eventData.x}:${eventData.y}`
+    const expectedSignature = crypto.createHmac('sha256', secretKeyStr).update(dataString).digest('hex')
+
+    if (hmacSignature !== expectedSignature) {
+      return NextResponse.json({ error: "데이터 검증에 실패했습니다. (Invalid Signature)" }, { status: 400 })
     }
 
     // 1. 현재 라운드 가져오기
@@ -62,7 +81,11 @@ export async function POST(req: Request) {
     // 이른 체크 여부 판정
     const isEarly = exactMs < targetTimeMs
 
-    // TODO: hmacSignature 검증 (보안)
+    // [BOT DEFENSE] 3. 초정밀 타격(5ms 이내) 의심 계정 플래그 
+    if (timeDiff < 5) {
+      console.warn(`[BOT ALERT] 🚨 User ${userId} hit within 5ms! timeDiff: ${timeDiff}ms (exactMs: ${exactMs}, target: ${targetTimeMs})`)
+      // 실제 서비스라면 DB에 isSuspicious = true 로 기록하여 나중에 랭킹에서 제외할 수 있습니다.
+    }
 
     // 5. 트랜잭션으로 처리 (포인트 차감, 팟 증가, 제출 생성)
     const result = await prisma.$transaction(async (tx) => {
@@ -100,7 +123,7 @@ export async function POST(req: Request) {
           timeDiff,
           isEarly,
           hmacSignature: hmacSignature || "none",
-          clientNonce: clientNonce || "none",
+          clientNonce: "none",
           serverReceivedAt
         }
       })

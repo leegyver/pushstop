@@ -72,21 +72,36 @@ export default function Home() {
     return `${m}:${s}`
   }
 
-  const handleStop = async (exactTimestamp: number) => {
+  const handleStop = async (exactTimestamp: number, eventData: any) => {
     if (!session) {
       alert("로그인이 필요합니다!")
       return
     }
+
     try {
       setHasSubmitted(true) // Disable button immediately
+      
+      // 1. HMAC 서명 생성 (클라이언트 사이드 방어)
+      const encoder = new TextEncoder()
+      const secretKeyStr = process.env.NEXT_PUBLIC_GAME_SECRET || "pushstop_fallback_secret_2026"
+      const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(secretKeyStr),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+      )
+      const dataString = `${exactTimestamp}:${eventData.isTrusted}:${eventData.x}:${eventData.y}`
+      const signatureBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(dataString))
+      const hmacSignature = Array.from(new Uint8Array(signatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('')
+
       const res = await fetch("/api/game/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          // 클라이언트의 절대시간 (로컬시간 + 오프셋)
           exactTimestamp: exactTimestamp, 
-          hmacSignature: "test", 
-          clientNonce: "test" 
+          hmacSignature: hmacSignature, 
+          eventData: eventData
         })
       })
       const data = await res.json()
