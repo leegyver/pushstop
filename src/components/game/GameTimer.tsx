@@ -13,7 +13,7 @@ interface GameTimerProps {
 export function GameTimer({ targetTimeMs, serverTimeOffset, onStop, disabled }: GameTimerProps) {
   const [currentMs, setCurrentMs] = useState(0)
   const isStopped = useRef(false)
-  const animationFrameId = useRef<number>()
+  const animationFrameId = useRef<number | null>(null)
 
   useEffect(() => {
     const update = () => {
