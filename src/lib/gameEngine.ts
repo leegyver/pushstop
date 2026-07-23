@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma"
 // 게임 설정 상수
 export const GAME_CONSTANTS = {
   PARTICIPATION_FEE: 100, // 게임 참여 시 차감되는 포인트
-  ROUND_DURATION_MS: 20 * 60 * 1000, // 게임 진행 시간: 20분
   RESULT_DURATION_MS: 10 * 60 * 1000, // 결과 대기 시간: 10분
+  TARGET_ALLOWANCE_MS: 1 * 60 * 1000, // 목표 시간 이후 게임이 열려있는 유예 시간 (1분)
   PRIZE_POOL_RATIO: {
     FIRST: 0.50,  // 1등 50%
     SECOND: 0.20, // 2등 20%
@@ -66,15 +66,13 @@ export async function getCurrentRound() {
 
 async function createNewRound() {
   const now = new Date()
-  const endsAt = new Date(now.getTime() + GAME_CONSTANTS.ROUND_DURATION_MS)
-
-  // Target Time: Random time between StartsAt + 5 min and EndsAt - 1 min
-  // This ensures the target is always in the future and gives players time to prepare
-  const minTargetOffset = 5 * 60 * 1000
-  const maxTargetOffset = GAME_CONSTANTS.ROUND_DURATION_MS - (1 * 60 * 1000)
-  const randomOffset = Math.floor(Math.random() * (maxTargetOffset - minTargetOffset)) + minTargetOffset
   
-  const targetTime = now.getTime() + randomOffset
+  // 첫 라운드(또는 수동 시작)는 현재 시간으로부터 30분 뒤를 타겟으로 설정
+  const targetOffset = 30 * 60 * 1000
+  const targetTime = now.getTime() + targetOffset
+  
+  // 게임 종료 시간은 타겟 시간 이후 1분(유예 시간) 뒤
+  const endsAt = new Date(targetTime + GAME_CONSTANTS.TARGET_ALLOWANCE_MS)
 
   return await prisma.round.create({
     data: {
@@ -186,16 +184,19 @@ export async function calculateRoundResults(roundId: string) {
   // 4. 다음 라운드 스케줄링 (지금으로부터 결과 노출 10분 뒤 시작)
   const now = new Date()
   const nextStartsAt = new Date(now.getTime() + GAME_CONSTANTS.RESULT_DURATION_MS)
-  const nextEndsAt = new Date(nextStartsAt.getTime() + GAME_CONSTANTS.ROUND_DURATION_MS)
 
   // 미래 시간에 예약된 상태(WAITING)로 생성
   // 하지만 Lazy Evaluation 방식에서는 현재 시간이 nextStartsAt을 지나면 ACTIVE로 처리할 로직이 필요함.
   // 로직 간소화를 위해, 현재 게임이 끝난 즉시 새 라운드를 만들되 startsAt을 10분 뒤로 세팅
-  // 다음 라운드 스케줄링시에도 랜덤 타겟 설정
-  const minTargetOffset = 5 * 60 * 1000
-  const maxTargetOffset = GAME_CONSTANTS.ROUND_DURATION_MS - (1 * 60 * 1000)
+  
+  // 다음 라운드 스케줄링시 "20분 내외(18분~22분)" 랜덤 타겟 설정
+  const minTargetOffset = 18 * 60 * 1000
+  const maxTargetOffset = 22 * 60 * 1000
   const randomOffset = Math.floor(Math.random() * (maxTargetOffset - minTargetOffset)) + minTargetOffset
   const nextTargetTime = nextStartsAt.getTime() + randomOffset
+
+  // 게임 종료 시간은 타겟 시간 이후 1분 뒤
+  const nextEndsAt = new Date(nextTargetTime + GAME_CONSTANTS.TARGET_ALLOWANCE_MS)
 
   await prisma.round.create({
     data: {
