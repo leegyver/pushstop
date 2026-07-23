@@ -42,7 +42,12 @@ export function Navbar() {
                   </span>
                 </div>
                 {session.user.image ? (
-                  <img src={session.user.image} alt="Profile" className="w-10 h-10 rounded-full border-2 border-[var(--panel-border)] object-cover" />
+                  <img 
+                    src={session.user.image} 
+                    alt="Profile" 
+                    className="w-10 h-10 rounded-full border-2 border-[var(--panel-border)] object-cover" 
+                    onError={(e) => { (e.target as HTMLImageElement).src = "/default-avatar.svg" }}
+                  />
                 ) : (
                   <img src="/default-avatar.svg" alt="Default Profile" className="w-10 h-10 rounded-full border-2 border-[var(--panel-border)] object-cover" />
                 )}

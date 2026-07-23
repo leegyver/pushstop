@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { User, ShieldCheck, Trophy, Activity, History, ArrowRight, Loader2, Coins, Pencil, X } from "lucide-react"
+import { User, ShieldCheck, Trophy, Activity, History, ArrowRight, Loader2, Coins, Pencil, X, Camera } from "lucide-react"
 
 export default function ProfilePage() {
   const { data: session, status } = useSession()
@@ -12,11 +12,14 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
-  // Edit Nickname State
   const [isEditingNickname, setIsEditingNickname] = useState(false)
   const [newNickname, setNewNickname] = useState("")
   const [editError, setEditError] = useState("")
   const [editLoading, setEditLoading] = useState(false)
+
+  // Avatar Upload State
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -67,6 +70,37 @@ export default function ProfilePage() {
     }
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("이미지 크기는 5MB 이하여야 합니다.")
+      return
+    }
+
+    setAvatarUploading(true)
+    const formData = new FormData()
+    formData.append("image", file)
+
+    try {
+      const res = await fetch("/api/profile/image", {
+        method: "POST",
+        body: formData,
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setProfileData({ ...profileData, user: { ...profileData.user, image: data.imageUrl } })
+      } else {
+        alert(data.error || "이미지 업로드에 실패했습니다.")
+      }
+    } catch (error) {
+      alert("네트워크 오류가 발생했습니다.")
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center">
@@ -92,13 +126,33 @@ export default function ProfilePage() {
           <div className="bg-[var(--panel-bg)] border border-[var(--panel-border)] rounded-3xl p-8 flex flex-col items-center text-center relative overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]">
             <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[var(--accent-primary)]/20 to-transparent"></div>
             
-            <div className="w-24 h-24 rounded-full bg-black/50 border-4 border-[var(--accent-primary)] mb-4 relative z-10 flex items-center justify-center overflow-hidden">
-              {user.image ? (
-                <img src={user.image} alt={user.nickname || "User"} className="w-full h-full object-cover" />
+            <div 
+              className="w-24 h-24 rounded-full bg-black/50 border-4 border-[var(--accent-primary)] mb-4 relative z-10 flex items-center justify-center overflow-hidden cursor-pointer group"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {avatarUploading ? (
+                <Loader2 className="w-8 h-8 text-[var(--accent-primary)] animate-spin" />
               ) : (
-                <img src="/default-avatar.svg" alt="Default Profile" className="w-full h-full object-cover" />
+                <>
+                  <img 
+                    src={user.image || "/default-avatar.svg"} 
+                    alt={user.nickname || "User"} 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => { (e.target as HTMLImageElement).src = "/default-avatar.svg" }}
+                  />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <Camera className="w-8 h-8 text-white" />
+                  </div>
+                </>
               )}
             </div>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleImageUpload} 
+              accept="image/jpeg, image/png, image/webp, image/gif" 
+              className="hidden" 
+            />
             
             <div className="relative z-10 flex items-center gap-2 mb-1">
               <h1 className="text-2xl font-black text-white">
