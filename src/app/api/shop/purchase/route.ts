@@ -80,6 +80,7 @@ export async function POST(req: Request) {
         data: {
           userId,
           amount: -product.price,
+          previousBalance: user.balance,
           newBalance: updatedUser.balance,
           type: "SHOP_PURCHASE",
           description: `상점 교환: ${product.name}`
