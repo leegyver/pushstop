@@ -3,6 +3,7 @@ import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
 import { Monitor, Moon, Sun, Snowflake, Trees, Gift, LogOut, User as UserIcon, Coins } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
+import Link from "next/link"
 import { LoginModal } from "./LoginModal"
 
 export function Navbar() {
@@ -33,19 +34,21 @@ export function Navbar() {
             <div className="w-24 h-8 bg-gray-200/20 animate-pulse rounded-lg" />
           ) : session?.user ? (
             <div className="flex items-center gap-4">
-              <div className="flex flex-col items-end">
-                <span className="font-semibold text-sm">{session.user.name || (session.user as any).nickname || "유저"}</span>
-                <span className="text-xs text-[var(--accent-primary)] flex items-center gap-1">
-                  <Coins className="w-3 h-3" /> {(session.user as any).balance?.toLocaleString() || 0} P
-                </span>
-              </div>
-              {session.user.image ? (
-                <img src={session.user.image} alt="Profile" className="w-10 h-10 rounded-full border-2 border-[var(--panel-border)]" />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-[var(--panel-bg)] border border-[var(--panel-border)] flex items-center justify-center">
-                  <UserIcon className="w-5 h-5 text-[var(--text-secondary)]" />
+              <Link href="/profile" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+                <div className="flex flex-col items-end">
+                  <span className="font-semibold text-sm">{session.user.name || (session.user as any).nickname || "유저"}</span>
+                  <span className="text-xs text-[var(--accent-primary)] flex items-center gap-1">
+                    <Coins className="w-3 h-3" /> {(session.user as any).balance?.toLocaleString() || 0} P
+                  </span>
                 </div>
-              )}
+                {session.user.image ? (
+                  <img src={session.user.image} alt="Profile" className="w-10 h-10 rounded-full border-2 border-[var(--panel-border)]" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-[var(--panel-bg)] border border-[var(--panel-border)] flex items-center justify-center">
+                    <UserIcon className="w-5 h-5 text-[var(--text-secondary)]" />
+                  </div>
+                )}
+              </Link>
               <button onClick={() => signOut()} className="p-2 text-[var(--text-secondary)] hover:text-red-400 transition-colors" title="로그아웃">
                 <LogOut className="w-4 h-4" />
               </button>
