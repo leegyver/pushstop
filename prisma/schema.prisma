@@ -145,6 +145,7 @@ model Submission {
   exactTimestamp Decimal @db.Decimal(20, 4)
   timeDiff       Decimal @db.Decimal(20, 4) // absolute difference from target
   isUnique       Boolean @default(true) // If someone else got exact same time
+  isEarly        Boolean @default(false) // If they pressed before the target time
   rank           Int?
 
   // Security / Anti-Cheat

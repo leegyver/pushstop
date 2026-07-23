@@ -36,13 +36,14 @@ export async function GET() {
       
       return NextResponse.json({
         success: true,
+        serverTime: Date.now(),
         round: round, // WAITING 중인 새 라운드 정보 (언제 시작하는지 표시 위함)
         endedRound: endedRound // 방금 끝난 게임 결과
       })
     }
 
     // ACTIVE 상태라면 라운드 정보만 리턴
-    return NextResponse.json({ success: true, round })
+    return NextResponse.json({ success: true, serverTime: Date.now(), round })
 
   } catch (error) {
     console.error("GET /api/game/current Error:", error)

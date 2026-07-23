@@ -44,11 +44,23 @@ export async function POST(req: Request) {
     }
 
     // 4. 서버 측 검증 및 계산
-    // 서버 도착 시간(serverReceivedAt)과 클라이언트의 exactTimestamp 간의 차이가 너무 크면 의심
+    // 서버 도착 시간(serverReceivedAt)
     const serverReceivedAt = new Date()
+    
+    // 네트워크 핑이나 브라우저-서버 시계 불일치가 있을 수 있지만
+    // 1/10000초 정밀도를 위해 클라이언트가 보낸 exactTimestamp를 일단 신뢰함.
+    // 단, 서버도착시간과 너무 큰 차이(예: 3초 이상)가 나면 조작으로 간주하고 거절
+    if (Math.abs(serverReceivedAt.getTime() - exactTimestamp) > 3000) {
+      return NextResponse.json({ error: "비정상적인 시간이 감지되었습니다." }, { status: 400 })
+    }
+
+    const targetTimeMs = Number(round.targetTime)
+    const exactMs = Number(exactTimestamp)
+    
     // 타임스탬프 계산 (목표 시간과의 오차 절대값)
-    // exactTimestamp 는 클라이언트에서 밀리초(ms) 단위로 보낸 경과 시간이라 가정
-    const timeDiff = Math.abs(Number(exactTimestamp) - GAME_CONSTANTS.TARGET_TIME_MS)
+    const timeDiff = Math.abs(exactMs - targetTimeMs)
+    // 이른 체크 여부 판정
+    const isEarly = exactMs < targetTimeMs
 
     // TODO: hmacSignature 검증 (보안)
 
@@ -86,6 +98,7 @@ export async function POST(req: Request) {
           userId,
           exactTimestamp,
           timeDiff,
+          isEarly,
           hmacSignature: hmacSignature || "none",
           clientNonce: clientNonce || "none",
           serverReceivedAt

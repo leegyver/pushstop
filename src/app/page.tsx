@@ -14,6 +14,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [hasSubmitted, setHasSubmitted] = useState(false)
   const [submitResult, setSubmitResult] = useState<string | null>(null)
+  const [serverTimeOffset, setServerTimeOffset] = useState<number>(0)
 
   // Timer logic for client-side syncing
   const [timeLeft, setTimeLeft] = useState<number>(0)
@@ -29,6 +30,9 @@ export default function Home() {
       const res = await fetch("/api/game/current")
       const data = await res.json()
       if (data.success) {
+        if (data.serverTime) {
+          setServerTimeOffset(data.serverTime - Date.now())
+        }
         setRoundState(data.round)
         if (data.endedRound) {
           setEndedData(data.endedRound)
@@ -78,12 +82,22 @@ export default function Home() {
       const res = await fetch("/api/game/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ exactTimestamp, hmacSignature: "test", clientNonce: "test" })
+        body: JSON.stringify({ 
+          // 클라이언트의 절대시간 (로컬시간 + 오프셋)
+          exactTimestamp: exactTimestamp, 
+          hmacSignature: "test", 
+          clientNonce: "test" 
+        })
       })
       const data = await res.json()
       if (data.success) {
         const diff = data.submission.timeDiff
-        setSubmitResult(`기록이 제출되었습니다! (오차: ${(diff / 1000).toFixed(4)}초)`)
+        const isEarly = data.submission.isEarly
+        if (isEarly) {
+          setSubmitResult(`[조기 탈락] 목표 시간보다 ${(diff / 1000).toFixed(4)}초 일찍 누르셨습니다. 😭`)
+        } else {
+          setSubmitResult(`기록이 제출되었습니다! (목표 시간 대비 +${(diff / 1000).toFixed(4)}초)`)
+        }
         fetchRoundStatus() // Update pot size
       } else {
         setHasSubmitted(false)
@@ -115,10 +129,15 @@ export default function Home() {
       </motion.div>
 
       <div className="text-[var(--accent-primary)] font-bold text-xl mb-4 flex items-center gap-2">
-        <Clock className="w-5 h-5" /> 종료까지 {formatTimeLeft(timeLeft)}
+        <Clock className="w-5 h-5" /> 진행 종료까지 {formatTimeLeft(timeLeft)}
       </div>
 
-      <GameTimer targetTimeMs={roundState?.targetTime || 60000} onStop={handleStop} disabled={hasSubmitted || status === "unauthenticated"} />
+      <GameTimer 
+        targetTimeMs={Number(roundState?.targetTime || 0)} 
+        serverTimeOffset={serverTimeOffset}
+        onStop={handleStop} 
+        disabled={hasSubmitted || status === "unauthenticated"} 
+      />
       
       {hasSubmitted && submitResult && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8 text-lg font-bold text-green-400 bg-green-500/10 px-6 py-3 rounded-2xl border border-green-500/20">
@@ -155,64 +174,91 @@ export default function Home() {
 
   const renderLeaderboard = () => {
     if (!endedData || !endedData.submissions) return null
-    return (
-      <div className="w-full max-w-4xl mx-auto glass-panel p-6 rounded-3xl mt-8">
-        <h3 className="text-2xl font-black text-white flex items-center gap-3 mb-6">
-          <Trophy className="text-yellow-400" /> 이전 라운드 결과 (상위 20명)
-        </h3>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/10 text-[var(--text-secondary)]">
-                <th className="p-4 font-bold">순위</th>
-                <th className="p-4 font-bold">닉네임</th>
-                <th className="p-4 font-bold">오차 시간</th>
-                <th className="p-4 font-bold">상태</th>
-              </tr>
-            </thead>
-            <tbody>
-              {endedData.submissions.map((sub: any, idx: number) => {
-                const isMedal = sub.isUnique && sub.rank && sub.rank <= 3
-                let rankStr = "-"
-                let rowClass = "border-b border-white/5 hover:bg-white/5 transition-colors"
-                if (isMedal) {
-                  if (sub.rank === 1) rankStr = "🥇 1위"
-                  else if (sub.rank === 2) rankStr = "🥈 2위"
-                  else if (sub.rank === 3) rankStr = "🥉 3위"
-                  rowClass = "border-b border-white/10 bg-yellow-500/10"
-                } else if (!sub.isUnique) {
-                  rowClass = "border-b border-white/5 opacity-50 bg-red-500/5"
-                  rankStr = "탈락"
-                } else {
-                  rankStr = sub.rank ? `${sub.rank}위` : "-"
-                }
 
-                return (
-                  <tr key={sub.id} className={rowClass}>
-                    <td className="p-4 font-bold text-white">{rankStr}</td>
-                    <td className="p-4">{sub.user?.nickname || "알 수 없음"}</td>
-                    <td className="p-4 font-mono text-[var(--accent-primary)] font-bold">
-                      {(Number(sub.timeDiff) / 1000).toFixed(4)}초
-                    </td>
-                    <td className="p-4">
-                      {!sub.isUnique ? (
-                        <span className="flex items-center gap-1 text-red-400 text-xs font-bold bg-red-500/20 px-2 py-1 rounded-full w-max">
-                          <AlertCircle className="w-3 h-3" /> 동점자 탈락
-                        </span>
-                      ) : (
-                        <span className="text-xs text-[var(--text-secondary)]">정상</span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-              {endedData.submissions.length === 0 && (
-                <tr><td colSpan={4} className="p-8 text-center text-[var(--text-secondary)]">참여자가 없습니다.</td></tr>
-              )}
-            </tbody>
-          </table>
+    // 딤드처리된 조기 클릭자 목록과 정상 랭킹을 분리
+    const earlyOuts = endedData.submissions.filter((s: any) => s.isEarly).slice(0, 10)
+    const validRanks = endedData.submissions.filter((s: any) => !s.isEarly)
+
+    return (
+      <div className="w-full max-w-4xl mx-auto mt-8 flex flex-col gap-6">
+        {/* Valid Ranks Table */}
+        <div className="glass-panel p-6 rounded-3xl">
+          <h3 className="text-2xl font-black text-white flex items-center gap-3 mb-6">
+            <Trophy className="text-yellow-400" /> 이전 라운드 순위 (상위 20명)
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/10 text-[var(--text-secondary)]">
+                  <th className="p-4 font-bold">순위</th>
+                  <th className="p-4 font-bold">닉네임</th>
+                  <th className="p-4 font-bold">체크 기록 (목표 대비)</th>
+                  <th className="p-4 font-bold">상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                {validRanks.map((sub: any) => {
+                  const isMedal = sub.isUnique && sub.rank && sub.rank <= 3
+                  let rankStr = "-"
+                  let rowClass = "border-b border-white/5 hover:bg-white/5 transition-colors"
+                  
+                  if (isMedal) {
+                    if (sub.rank === 1) rankStr = "🥇 1위"
+                    else if (sub.rank === 2) rankStr = "🥈 2위"
+                    else if (sub.rank === 3) rankStr = "🥉 3위"
+                    rowClass = "border-b border-white/10 bg-yellow-500/10"
+                  } else if (!sub.isUnique) {
+                    rowClass = "border-b border-white/5 opacity-50 bg-red-500/5"
+                    rankStr = "탈락"
+                  } else {
+                    rankStr = sub.rank ? `${sub.rank}위` : "-"
+                  }
+
+                  return (
+                    <tr key={sub.id} className={rowClass}>
+                      <td className="p-4 font-bold text-white">{rankStr}</td>
+                      <td className="p-4">{sub.user?.nickname || "알 수 없음"}</td>
+                      <td className="p-4 font-mono text-[var(--accent-primary)] font-bold">
+                        +{ (Number(sub.timeDiff) / 1000).toFixed(4) }초
+                      </td>
+                      <td className="p-4">
+                        {!sub.isUnique ? (
+                          <span className="flex items-center gap-1 text-red-400 text-xs font-bold bg-red-500/20 px-2 py-1 rounded-full w-max">
+                            <AlertCircle className="w-3 h-3" /> 동점자 탈락
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[var(--text-secondary)] font-bold text-green-400">정상 통과</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+                {validRanks.length === 0 && (
+                  <tr><td colSpan={4} className="p-8 text-center text-[var(--text-secondary)]">정상 참여자가 없습니다.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        {/* Early Outs List (Dimmed) */}
+        {earlyOuts.length > 0 && (
+          <div className="glass-panel p-6 rounded-3xl opacity-60 grayscale-[50%] hover:grayscale-0 hover:opacity-100 transition-all">
+            <h3 className="text-xl font-bold text-[var(--text-secondary)] flex items-center gap-2 mb-4">
+              <AlertCircle className="text-red-500 w-5 h-5" /> 조기 클릭 탈락자 (아웃)
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              {earlyOuts.map((sub: any) => (
+                <div key={sub.id} className="bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl flex items-center gap-3">
+                  <span className="font-bold text-white/70">{sub.user?.nickname || "알 수 없음"}</span>
+                  <span className="font-mono text-red-400 text-sm">
+                    -{ (Number(sub.timeDiff) / 1000).toFixed(4) }초
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -258,7 +304,7 @@ export default function Home() {
             PUSH STOP
           </h1>
           <p className="text-[var(--text-secondary)] text-lg md:text-xl max-w-2xl mx-auto font-medium">
-            1/10,000초의 정밀한 타이머 게임. 중복 없는 기록으로 상위 3등 안에 들어 상금을 독식하세요!
+            1/10,000초 정밀 시계. 목표 시간에 가장 가깝게, 하지만 <span className="text-red-400 font-bold">먼저 누르면 즉시 탈락</span>합니다. 심리전에서 승리해 팟을 독식하세요!
           </p>
         </motion.div>
 

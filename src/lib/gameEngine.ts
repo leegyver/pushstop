@@ -5,7 +5,6 @@ export const GAME_CONSTANTS = {
   PARTICIPATION_FEE: 100, // 게임 참여 시 차감되는 포인트
   ROUND_DURATION_MS: 20 * 60 * 1000, // 게임 진행 시간: 20분
   RESULT_DURATION_MS: 10 * 60 * 1000, // 결과 대기 시간: 10분
-  TARGET_TIME_MS: 60000, // 목표 시간: 1분 (60,000ms) - 데모/UI와 맞춤
   PRIZE_POOL_RATIO: {
     FIRST: 0.50,  // 1등 50%
     SECOND: 0.20, // 2등 20%
@@ -69,9 +68,17 @@ async function createNewRound() {
   const now = new Date()
   const endsAt = new Date(now.getTime() + GAME_CONSTANTS.ROUND_DURATION_MS)
 
+  // Target Time: Random time between StartsAt + 5 min and EndsAt - 1 min
+  // This ensures the target is always in the future and gives players time to prepare
+  const minTargetOffset = 5 * 60 * 1000
+  const maxTargetOffset = GAME_CONSTANTS.ROUND_DURATION_MS - (1 * 60 * 1000)
+  const randomOffset = Math.floor(Math.random() * (maxTargetOffset - minTargetOffset)) + minTargetOffset
+  
+  const targetTime = now.getTime() + randomOffset
+
   return await prisma.round.create({
     data: {
-      targetTime: GAME_CONSTANTS.TARGET_TIME_MS,
+      targetTime: targetTime, // Absolute Timestamp
       status: "ACTIVE",
       totalPotPoints: 0,
       startsAt: now,
@@ -117,9 +124,9 @@ export async function calculateRoundResults(roundId: string) {
     })
   }
 
-  // 3. 수상자(1,2,3위) 선정 (isUnique == true 인 유저 중 timeDiff 가 제일 작은 순)
+  // 3. 수상자(1,2,3위) 선정 (isUnique == true && isEarly == false 인 유저 중 timeDiff 가 제일 작은 순)
   const eligibleSubmissions = submissions
-    .filter(s => !nonUniqueIds.includes(s.id))
+    .filter(s => !nonUniqueIds.includes(s.id) && !s.isEarly)
     .sort((a, b) => Number(a.timeDiff) - Number(b.timeDiff))
 
   const totalPot = round.totalPotPoints
@@ -184,9 +191,15 @@ export async function calculateRoundResults(roundId: string) {
   // 미래 시간에 예약된 상태(WAITING)로 생성
   // 하지만 Lazy Evaluation 방식에서는 현재 시간이 nextStartsAt을 지나면 ACTIVE로 처리할 로직이 필요함.
   // 로직 간소화를 위해, 현재 게임이 끝난 즉시 새 라운드를 만들되 startsAt을 10분 뒤로 세팅
+  // 다음 라운드 스케줄링시에도 랜덤 타겟 설정
+  const minTargetOffset = 5 * 60 * 1000
+  const maxTargetOffset = GAME_CONSTANTS.ROUND_DURATION_MS - (1 * 60 * 1000)
+  const randomOffset = Math.floor(Math.random() * (maxTargetOffset - minTargetOffset)) + minTargetOffset
+  const nextTargetTime = nextStartsAt.getTime() + randomOffset
+
   await prisma.round.create({
     data: {
-      targetTime: GAME_CONSTANTS.TARGET_TIME_MS,
+      targetTime: nextTargetTime,
       status: "WAITING", 
       totalPotPoints: 0,
       startsAt: nextStartsAt,
